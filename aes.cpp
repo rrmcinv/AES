@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <getopt.h>
+#include <stdexcept>
 
 namespace aes {
 
@@ -21,42 +22,76 @@ using namespace std;
 using namespace aes;
 
 int main (int argc, char *argv[]){
-           int option;
-           while (1) {
-               int this_option_optind = optind ? optind : 1;
-               int option_index = 0;
-               static struct option long_options[] = {
-                   {"keysize",     required_argument, 0,  0 },
-                   {"keyfile",  required_argument,       0,  0 },
-                   {"inputfile",  required_argument, 0,  0 },
-                   {"outputfile", required_argument,       0,  0 },
-                   {"mode",  required_argument, 0, 'c'},
-                   {0,         0,                 0,  0 }
-               };
+	int keysize = -1;
+	string keyfile = "";
+	string inputfile = "";
+	string outputfile = "";
+	string mode = "";
 
-               option = getopt_long_only(argc, argv, "", long_options, &option_index);
-               if (option == -1)
-                   break;
-               switch (option) {
-               case 0:
-                   printf("option %s", long_options[option_index].name);
-                   if (optarg)
-                       printf(" with arg %s", optarg);
-                   printf("\n");
-                   break;
-               case '?':
-                   break;
-               default:
-                   printf("?? getopt returned character code 0%o ??\n", option);
-               }
-           }
+	int option;
+	while (1) {
+		int this_option_optind = optind ? optind : 1;
+		int option_index = 0;
+		static struct option long_options[] = {
+			{"keysize",     required_argument, 0,  0 },
+			{"keyfile",  required_argument,       0,  0 },
+			{"inputfile",  required_argument, 0,  0 },
+			{"outputfile", required_argument,       0,  0 },
+			{"mode",  required_argument, 0, 0},
+			{0,         0,                 0,  0 }
+		};
 
-           if (optind < argc) {
-               printf("non-option ARGV-elements: ");
-               while (optind < argc)
-                   printf("%s ", argv[optind++]);
-               printf("\n");
-           }
+		option = getopt_long_only(argc, argv, "", long_options, &option_index);
+		if (option == -1)
+			break;
+		switch (option) {
+		case 0:
+			switch (option_index){
+				case 0:
+					cout << "keysize";
+					try {
+						keysize = stoi(optarg);
+						if (keysize != 128 && keysize != 256) 
+							throw invalid_argument("wrong # of bits");
+					}
+					catch (...){
+						cout << "error reading keysize; must be 128 or 256." << endl;
+						return 1;
+					}
+					break;
+				case 1:
+					cout << "keyfile";
+					break;
+				case 2:
+					cout << "inputfile";
+					break;
+				case 3:
+					cout << "outputfile";
+					break;
+				case 4:
+					cout << "mode";
+					break;
+			}
+			printf("option %s", long_options[option_index].name);
+			if (optarg)
+			printf(" with arg %s", optarg);
+			printf("\n");
+			break;
+		case '?':
+			break;
+		default:
+			printf("?? getopt returned character code 0%o ??\n", option);
+		}
+	}
+
+	if (optind < argc) {
+		printf("non-option ARGV-elements: ");
+		while (optind < argc)
+			printf("%s ", argv[optind++]);
+		printf("\n");
+	}
+
+
 
 
 	return 0;
