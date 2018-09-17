@@ -12,6 +12,7 @@
 #include <unistd.h>
 #include <getopt.h>
 #include <stdexcept>
+#include <algorithm>
 
 namespace aes {
 
@@ -28,6 +29,7 @@ int main (int argc, char *argv[]){
 	string outputfile = "";
 	string mode = "";
 
+	// parse arguments
 	int option;
 	while (1) {
 		int this_option_optind = optind ? optind : 1;
@@ -48,7 +50,6 @@ int main (int argc, char *argv[]){
 		case 0:
 			switch (option_index){
 				case 0:
-					cout << "keysize";
 					try {
 						keysize = stoi(optarg);
 						if (keysize != 128 && keysize != 256) 
@@ -60,16 +61,21 @@ int main (int argc, char *argv[]){
 					}
 					break;
 				case 1:
-					cout << "keyfile";
+					keyfile = optarg;
 					break;
 				case 2:
-					cout << "inputfile";
+					inputfile = optarg;
 					break;
 				case 3:
-					cout << "outputfile";
+					outputfile = optarg;
 					break;
 				case 4:
-					cout << "mode";
+					mode = optarg;
+					transform(mode.begin(), mode.end(), mode.begin(), ::tolower);
+					if (mode != "encrypt" && mode != "decrypt"){
+						cout << "invalid mode, must be encrypt or decrypt." << endl;
+						return 1;
+					}
 					break;
 			}
 			printf("option %s", long_options[option_index].name);
@@ -90,7 +96,8 @@ int main (int argc, char *argv[]){
 			printf("%s ", argv[optind++]);
 		printf("\n");
 	}
-
+	
+	// open files
 
 
 
