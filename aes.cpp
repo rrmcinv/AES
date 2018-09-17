@@ -23,10 +23,10 @@ using namespace std;
 using namespace aes;
 
 int main (int argc, char *argv[]){
-	int keysize = -1;
-	string keyfile = "";
-	string inputfile = "";
-	string outputfile = "";
+	int key_size = -1;
+	string key_file = "";
+	string input_file = "";
+	string output_file = "";
 	string mode = "";
 
 	// parse arguments
@@ -51,8 +51,8 @@ int main (int argc, char *argv[]){
 			switch (option_index){
 				case 0:
 					try {
-						keysize = stoi(optarg);
-						if (keysize != 128 && keysize != 256) 
+						key_size = stoi(optarg);
+						if (key_size != 128 && key_size != 256) 
 							throw invalid_argument("wrong # of bits");
 					}
 					catch (...){
@@ -61,13 +61,13 @@ int main (int argc, char *argv[]){
 					}
 					break;
 				case 1:
-					keyfile = optarg;
+					key_file = optarg;
 					break;
 				case 2:
-					inputfile = optarg;
+					input_file = optarg;
 					break;
 				case 3:
-					outputfile = optarg;
+					output_file = optarg;
 					break;
 				case 4:
 					mode = optarg;
@@ -78,10 +78,6 @@ int main (int argc, char *argv[]){
 					}
 					break;
 			}
-			printf("option %s", long_options[option_index].name);
-			if (optarg)
-			printf(" with arg %s", optarg);
-			printf("\n");
 			break;
 		case '?':
 			break;
@@ -96,9 +92,29 @@ int main (int argc, char *argv[]){
 			printf("%s ", argv[optind++]);
 		printf("\n");
 	}
-	
-	// open files
 
+	// see if they used all flags	
+	if (key_size == -1 || key_file == "" || input_file == "" || output_file == "" || mode == ""){
+		cout << "Usage: ./aes --keysize <128|256> --keyfile <key file name> --inputfile <input file name> --outputfile <output file name> --mode <encrypt|decrypt>" << endl;
+		return 1;	
+	}
+
+	// attempt to open files
+	ifstream key_file_stream, input_file_stream;
+	ofstream output_file_stream;
+	char* raw_key;
+
+	key_file_stream.open(key_file, ios::in|ios::binary|ios::ate); // open at end of file in binary mode
+	if (!key_file_stream.is_open()){
+		cout << " failed to open key file" << endl;
+		return 1;	
+	}
+	
+	cout << "seen key size: " << key_file_stream.tellg() << endl;
+	if (key_file_stream.tellg() != key_size/8){
+		cout << "key size mismatch, expected " << key_size << " bits, got " << key_file_stream.tellg() * 8 << " bits." << endl;
+		return 1;
+	}
 
 
 	return 0;
