@@ -24,6 +24,7 @@ using namespace aes;
 
 int main (int argc, char *argv[]){
 	int key_size = -1;
+	int input_size = -1;
 	string key_file = "";
 	string input_file = "";
 	string output_file = "";
@@ -104,18 +105,35 @@ int main (int argc, char *argv[]){
 	ofstream output_file_stream;
 	char* raw_key;
 
-	key_file_stream.open(key_file, ios::in|ios::binary|ios::ate); // open at end of file in binary mode
+	// open key
+	key_file_stream.open(key_file, ios::in|ios::binary|ios::ate); // open at end of file in binary read mode
 	if (!key_file_stream.is_open()){
 		cout << " failed to open key file" << endl;
 		return 1;	
 	}
 	
-	cout << "seen key size: " << key_file_stream.tellg() << endl;
+	cout << "seen key size: " << key_file_stream.tellg() << " bytes" << endl;
 	if (key_file_stream.tellg() != key_size/8){
 		cout << "key size mismatch, expected " << key_size << " bits, got " << key_file_stream.tellg() * 8 << " bits." << endl;
 		return 1;
 	}
 
+	// open input file
+	input_file_stream.open(input_file, ios::in|ios::binary|ios::ate); // end of file, binary read mode
+	if (!input_file_stream.is_open()){
+		cout << " failed to open input file" << endl;
+		return 1;
+	}
+	
+	input_size = input_file_stream.tellg();
+	cout << "seen input size: " << input_size << " bytes" << endl;
+
+	// open output file
+	output_file_stream.open(output_file, ios::out|ios::binary); // binary write mode
+	if (!output_file_stream.is_open()){
+		cout << " failed to open output file" << endl;
+		return 1;
+	}
 
 	return 0;
 }
