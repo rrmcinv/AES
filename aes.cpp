@@ -14,12 +14,58 @@
 #include <stdexcept>
 #include <algorithm>
 
-namespace aes {
+using namespace std;
 
+const int nb = 4; // number of columns & rows in state per standard
+
+
+namespace aes {
+  
+  // mostly for debug purposes
+  void print_data(char* data, int& size){
+  	for(int i = 0; i < size; i++)
+    	cout << int(data[i]) << " ";
+    cout << endl;
+  }
+  
+  // pad input using CMS method
+  void pad(char* bytes, int &size){
+    int needed_bytes = 16 - size % 16;
+    for (int i = size; i < (size + needed_bytes); i++){
+    	bytes[i] = needed_bytes;
+    }
+		size += needed_bytes;
+  }
+	
+	void get_state(char** state, int start_index){
+		for (int i = start_index; i < start_index + 16; i+=4({
+			
+		}
+	}
+	
+  void encrypt(char* raw_input, char* raw_key, char* raw_output, int key_size, int input_size){
+    pad(raw_input, input_size); // pad the input appropriately
+    
+    if (input_size % 16 != 0 || input_size == 0){
+    	cout << "padding size error" << endl;
+    	return;
+    }
+    
+    // set up main cipher loop
+    for (int i = 0; i < input_size; i += 16){
+    	char** state = new char*[nb];
+    	for(int j = 0; j < nb; j++)
+    		state[j] = new char[nb];
+    }
+    get_state(state, i);
+  }
+  
+  void decrypt(char* raw_input, char* raw_key, char* raw_output, int key_size, int input_size){
+    
+  }
+  
 } // end namespace
 
-
-using namespace std;
 using namespace aes;
 
 int main (int argc, char *argv[]){
@@ -103,7 +149,6 @@ int main (int argc, char *argv[]){
 	// attempt to open files
 	ifstream key_file_stream, input_file_stream;
 	ofstream output_file_stream;
-	char* raw_key;
 
 	// open key
 	key_file_stream.open(key_file, ios::in|ios::binary|ios::ate); // open at end of file in binary read mode
@@ -117,6 +162,8 @@ int main (int argc, char *argv[]){
 		cout << "key size mismatch, expected " << key_size << " bits, got " << key_file_stream.tellg() * 8 << " bits." << endl;
 		return 1;
 	}
+	
+	key_file_stream.seekg(0, key_file_stream.beg); // go back to start of file
 
 	// open input file
 	input_file_stream.open(input_file, ios::in|ios::binary|ios::ate); // end of file, binary read mode
@@ -127,6 +174,7 @@ int main (int argc, char *argv[]){
 	
 	input_size = input_file_stream.tellg();
 	cout << "seen input size: " << input_size << " bytes" << endl;
+	input_file_stream.seekg(0, input_file_stream.beg); // go back to start of file
 
 	// open output file
 	output_file_stream.open(output_file, ios::out|ios::binary); // binary write mode
@@ -134,6 +182,33 @@ int main (int argc, char *argv[]){
 		cout << " failed to open output file" << endl;
 		return 1;
 	}
+
+  // done opening, store data
+  char* raw_key = new char[key_size];
+  char* raw_input;
+  char* raw_output;
+  
+  key_file_stream.read(raw_key, key_size);
+
+  
+  // done storing data, call primary functions
+	if (mode == "encrypt"){
+		raw_input = new char[input_size/16 + 16]; // add extra space for the padding
+		raw_output = new char[input_size/16 + 16]; 
+		input_file_stream.read(raw_input, input_size); 
+	  encrypt(raw_input, raw_key, raw_output, key_size, input_size);
+	  }
+	else if (mode == "decrypt"){
+		raw_input = new char[input_size];
+		raw_output = new char[input_size]; 
+		input_file_stream.read(raw_input, input_size); 
+	  decrypt(raw_input, raw_key, raw_output, key_size, input_size);
+	}
+	
+	input_file_stream.close();
+	key_file_stream.close();
+	output_file_stream.close();
+
 
 	return 0;
 }
