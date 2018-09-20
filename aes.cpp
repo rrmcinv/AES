@@ -22,10 +22,19 @@ const int nb = 4; // number of columns & rows in state per standard
 namespace aes {
   
   // mostly for debug purposes
-  void print_data(char* data, int& size){
-  	for(int i = 0; i < size; i++)
+  void print_data(char* data, int size, int start = 0){
+  	for(int i = start; i < (start + size); i++)
     	cout << int(data[i]) << " ";
     cout << endl;
+  }
+  
+  void print_state(char** state){
+  	for(int j = 0; j < nb; j++){
+  		for(int i = 0; i < nb; i++){
+  			cout << int(state[j][i]) << " ";
+  		}
+  			cout << endl;
+  	}
   }
   
   // pad input using CMS method
@@ -37,27 +46,54 @@ namespace aes {
 		size += needed_bytes;
   }
 	
-	void get_state(char** state, int start_index){
-		for (int i = start_index; i < start_index + 16; i+=4({
-			
+	void get_state(char** state, char* input, int start_index){
+		for (int i = 0; i < nb; i++){
+			for (int j = 0; j < nb; j++){
+				state[j][i] = input[start_index + j + 4*i];
+			}
 		}
+	}
+	
+	void read_state(char** state, char* output, int start_index){
+		for (int i = 0; i < nb; i++){
+			for (int j = 0; j < nb; j++){
+				output[start_index + j + 4*i] = state[j][i];
+			}
+		}
+	}
+	
+	char add(char a, char b){
+		return a^b;
+	}
+	
+	char multiply(char a, char b){
+	
 	}
 	
   void encrypt(char* raw_input, char* raw_key, char* raw_output, int key_size, int input_size){
     pad(raw_input, input_size); // pad the input appropriately
+    
+    int num_rounds = key_size/(8*nb) + 6; // should be either 10 or 14 depending on key_size
     
     if (input_size % 16 != 0 || input_size == 0){
     	cout << "padding size error" << endl;
     	return;
     }
     
+    // set up our state arrays
+  	char** in_state = new char*[nb];
+  	char** out_state = new char*[nb];
+  	for(int j = 0; j < nb; j++){
+  		in_state[j] = new char[nb];
+  		out_state[j] = new char[nb];
+  	}
+    
     // set up main cipher loop
-    for (int i = 0; i < input_size; i += 16){
-    	char** state = new char*[nb];
-    	for(int j = 0; j < nb; j++)
-    		state[j] = new char[nb];
+    for (int i = 0; i < input_size; i += 16){	
+		  get_state(state, raw_input, i);
+		  print_data(raw_input, nb*nb, i);
+		  print_state(state);
     }
-    get_state(state, i);
   }
   
   void decrypt(char* raw_input, char* raw_key, char* raw_output, int key_size, int input_size){
