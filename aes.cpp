@@ -21,6 +21,17 @@ const int nb = 4; // number of columns & rows in state per standard
 
 namespace aes {
   
+  struct word {
+  	char one, two, three, four;
+  	word(char firstword, char secondword, char thirdword, char fourthword){
+  		one = firstword;
+  		two = secondword;
+  		three = thirdword;
+  		four = fourthword;
+  	}
+  	word(){}
+  };
+  
   // mostly for debug purposes
   void print_data(char* data, int size, int start = 0){
   	for(int i = start; i < (start + size); i++)
@@ -62,6 +73,33 @@ namespace aes {
 		}
 	}
 	
+	void key_expansion(char* key, word* words, int nk, int words_length){
+		for (int i = 0; i < nk; i++){
+			words[i] = word(key[4*i], key[4*i + 1], key[4*i + 2], key[4*i + 3]);
+		}
+		
+		word temp;
+		for (int i = nk; i < words_length; i++)}
+			temp = words[i-1];
+			if (i % nk == 0){
+				
+			}
+			else if ((nk > 6) && ((i%nk) == 4) {
+			
+			}
+			words[i] = xor_words(words[i-nk], temp);
+		}
+	}
+	
+	word xor_words(word a, word b){
+		world result;
+		result.one = a.one^b.one;
+		result.two = a.two^b.two;
+		result.three = a.three^b.three;
+		result.four = a.four^b.four;
+		return result;
+	}
+	
 	char add(char a, char b){
 		return a^b;
 	}
@@ -73,13 +111,15 @@ namespace aes {
   void encrypt(char* raw_input, char* raw_key, char* raw_output, int key_size, int input_size){
     pad(raw_input, input_size); // pad the input appropriately
     
-    int num_rounds = key_size/(8*nb) + 6; // should be either 10 or 14 depending on key_size
+    const int word_size = 32; // 4 bytes
+    const int nk = key_size/word_size; // standard variable, words in the key
+    const int nr = nk + 6; // standard variable, should be either 10 or 14 depending on key_size
     
     if (input_size % 16 != 0 || input_size == 0){
     	cout << "padding size error" << endl;
     	return;
     }
-    
+    	
     // set up our state arrays
   	char** in_state = new char*[nb];
   	char** out_state = new char*[nb];
@@ -87,12 +127,16 @@ namespace aes {
   		in_state[j] = new char[nb];
   		out_state[j] = new char[nb];
   	}
+  	
+  	// get our key expansion (word array)
+  	word* word_array = new word[nb*(nr+1)]; // each word is 4 bytes
+    key_expansion(raw_key, word_array, nk, nb*(nr+1));
     
     // set up main cipher loop
     for (int i = 0; i < input_size; i += 16){	
-		  get_state(state, raw_input, i);
+		  get_state(in_state, raw_input, i);
 		  print_data(raw_input, nb*nb, i);
-		  print_state(state);
+		  print_state(in_state);
     }
   }
   
