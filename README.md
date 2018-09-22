@@ -36,10 +36,12 @@ RotWord: Rotates the bytes of a word very simply, moving each byte one space to 
 
 SubBytes: Using the S-Box, we substitute each byte in state with the S-box table, using high-nibble as row and low-nibble as column to lookup the correct value.
 
-ShiftRows: Shifts each row of a state with wraparound, with shift values corresponding directly to the row number; e.g. each byte in row 2 is shifted 2 places to the "right".
+ShiftRows: Shifts each row of a state with wraparound, with shift values corresponding directly to the row number; e.g. each byte in row 2 is shifted 2 places to the "left".
 
 MixColumns: Effectively performs matrix multiplication with a provided matrix (formed from the columns of the state), but with addition being the Add function (xors) and multiplication being the Multiply function (uses a lookup table because the described methodology is slow and confusing). 
 
 AddRoundKey: Differs slightly from the AES description of AddRoundKey; does not take a start or stop index for the expanded key words. Instead, uses the round number and establishes a start point as indicated in the standard (start = round*Nb). Simply goes down the array of key words and "adds" (Xors) their bytes to the state matrix column by column.
 
 # Decryption:
+
+

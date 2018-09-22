@@ -557,8 +557,93 @@ namespace aes {
     }
   }
   
-  void decrypt(char* raw_input, char* raw_key, char* raw_output, int key_size, int input_size){
+  //
+	// given state "state", performs the AES operation InvShiftRows, which just reverses ShiftRows
+	//
+  void InvShiftRows(char** state){
+  	for (int row = 1; row < 4; row++){
+			char new_vals[kNb];
+			for (int col = 0; col < kNb; col++){
+				int shifted = (col - row)%kNb;
+				if (shifted < 0)
+					shifted += kNb;
+				//cout << "replacing column " << col << " by column " << col << "-" << row << " is column " << shifted << endl;
+				new_vals[col] = state[row][shifted];
+			}
+			for (int col = 0; col < kNb; col++){
+				state[row][col] = new_vals[col];
+			} 
+		}
+  }
+
+  //
+	// uses the unverse s box array to substitute a specific byte with the appropriate value
+	//
+	char InvSubByte(char byte){
+		unsigned char c = byte;
+		unsigned char high_nibble = GetLowNibble(byte);
+		unsigned char low_nibble = GetHighNibble(byte);
+		return kSBox[high_nibble*16 + low_nibble];
+	}
+	
+		
+	//
+	// calls InvSubByte() to substitute all bytes of a state
+	//
+  void InvSubBytes(char** state){
+  	//cout << "InvSubBytes" << endl;
+		for (int col = 0; col < kNb; col++){
+			for (int row = 0; row < 4; row++){
+				state[row][col] = SubByte(state[row][col]);
+			}
+		}
+  }
+  
+  void InvMixColumns(char** state){
+  
+  }
+  
+  
+  //
+	// main loop function for decryption
+	//
+	void DecryptCipher(char** in_state, char* raw_input, char** out_state, char* raw_output, int offset, Word* key_words, int nr){
+    GetState(in_state, raw_input, offset); // read into state
+
+    // start actual cipher
+    AddRoundKey(in_state, key_words, nr); // invert last round
+
+    for (int round = (nr-1); round > 0; round--){
+      InvShiftRows(in_state);
+    	InvSubBytes(in_state);
+    	AddRoundKey(in_state, key_words, round);
+    	InvMixColumns(in_state);
+    }
     
+    // invert first round
+    InvShiftRows(in_state);
+    InvSubBytes(in_state);
+		AddRoundKey(in_state, key_words, 0);
+    
+    // output
+    ReadState(in_state, raw_output, offset);
+	}
+  
+  void Decrypt(char* raw_input, char* raw_key, char* raw_output, int key_size, int input_size){
+  	const int kWordSize = 32; // 4 bytes
+    const int kNk = key_size/kWordSize; // standard variable, words in the key
+    const int kNr = kNk + 6; // standard variable, should be either 10 or 14 depending on key_size; number of rounds
+    
+    // get our key expansion (word array)
+  	const int expanded_key_size = kNb*(kNr+1);
+  	Word* key_word_array = new Word[expanded_key_size]; // each word is 4 bytes
+    ExpandKey(raw_key, key_word_array, kNk, kNb*(kNr+1)); // get expanded key
+    
+    char** in_state = MakeState(kNb);
+  	char** out_state = MakeState(kNb);
+    for (int i = 0; i < input_size; i += 16){	
+		  DecryptCipher(in_state, raw_input, out_state, raw_output, i, key_word_array, kNr);
+    }
   }
   
 } // end namespace
@@ -700,7 +785,7 @@ int main (int argc, char *argv[]){
 		raw_input = new char[input_size];
 		raw_output = new char[input_size]; 
 		input_file_stream.read(raw_input, input_size); 
-	  decrypt(raw_input, raw_key, raw_output, key_size, input_size);
+	  Decrypt(raw_input, raw_key, raw_output, key_size, input_size);
 	}
 	
 	output_file_stream.write(raw_output, input_size);
