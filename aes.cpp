@@ -70,8 +70,10 @@ namespace aes {
   
   // mostly for debug purposes
   void print_data(char* data, int size, int start = 0){
-  	for(int i = start; i < (start + size); i++)
-    	cout << int(data[i]) << " ";
+  	for(int i = start; i < (start + size); i++){
+  		unsigned char c = data[i];
+    	cout << hex << (int)c << " ";
+    }
     cout << endl;
   }
   
@@ -179,8 +181,14 @@ namespace aes {
   	}
   	
   	// get our key expansion (word array)
-  	word* word_array = new word[nb*(nr+1)]; // each word is 4 bytes
+  	const int expanded_key_size = nb*(nr+1);
+  	word* word_array = new word[expanded_key_size]; // each word is 4 bytes
     key_expansion(raw_key, word_array, nk, nb*(nr+1));
+    print_data(raw_key, key_size/8);
+    for(int i = 0; i < key_size/8; i++){
+    	cout << hex << int(sub_byte(raw_key[i])) << " ";
+    }
+    cout << endl;
     
     // set up main cipher loop
     for (int i = 0; i < input_size; i += 16){	
@@ -314,14 +322,16 @@ int main (int argc, char *argv[]){
 	}
 
   // done opening, store data
-  char* raw_key = new char[key_size];
+  char* raw_key = new char[key_size/8];
   char* raw_input;
   char* raw_output;
   
-  key_file_stream.read(raw_key, key_size);
+  key_file_stream.read(raw_key, key_size/8);
+  print_data(raw_key, key_size/8);
 
   
   // done storing data, call primary functions
+	
 	if (mode == "encrypt"){
 		raw_input = new char[input_size/16 + 16]; // add extra space for the padding
 		raw_output = new char[input_size/16 + 16]; 
@@ -334,6 +344,8 @@ int main (int argc, char *argv[]){
 		input_file_stream.read(raw_input, input_size); 
 	  decrypt(raw_input, raw_key, raw_output, key_size, input_size);
 	}
+
+
 	
 	input_file_stream.close();
 	key_file_stream.close();
