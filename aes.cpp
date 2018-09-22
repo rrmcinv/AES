@@ -472,7 +472,7 @@ namespace aes {
     read_state(in_state, raw_output, offset);
 	}
 	
-  void encrypt(char* raw_input, char* raw_key, char* raw_output, int key_size, int input_size){
+  void encrypt(char* raw_input, char* raw_key, char* raw_output, int key_size, int& input_size){
     pad(raw_input, input_size); // pad the input appropriately
     
     const int word_size = 32; // 4 bytes
