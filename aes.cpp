@@ -209,7 +209,11 @@ ostream& operator<< (ostream &os, const Word& w){
 
 namespace aes {
   
-  // mostly for debug purposes
+  // Print functions for debug purposes
+  
+  //
+  // cycles through and prints hex byte values of chars from an array "data" of size "size", starting at index "start"
+  //
   void PrintData(char* data, int size, int start = 0){
   	for(int i = start; i < (start + size); i++){
   		unsigned char c = data[i];
@@ -218,6 +222,9 @@ namespace aes {
     cout << endl;
   }
   
+  //
+  // cycles through and prints hex byte values of a state "state"
+  //
   void PrintState(char** state){
   	for(int row = 0; row < 4; row++){
   		for(int col = 0; col < kNb; col++){
@@ -229,6 +236,9 @@ namespace aes {
   	cout << endl;
   }
   
+  //
+  // cycles through and prints hex byte values of the words contained in an array "words" of size "size"
+  //
   void PrintWords(Word* words, int size){
   	for (int i = 0; i < size; i++){
   		cout << words[i];
@@ -239,7 +249,13 @@ namespace aes {
   	cout << endl;
   }
   
+  //
   // pad input using CMS method
+  // changes array "bytes" of size "size" in place, and also changes the size to match the new size
+  // makes input data divisible by 16 bytes
+  // will ALWAYS pad, even if input size is already divisible by 16
+  // pads with a number equal to the number of bytes padded
+  //
   void Pad(char* bytes, int &size){
     int needed_bytes = 16 - size % 16;
     for (int i = size; i < (size + needed_bytes); i++){
@@ -248,6 +264,9 @@ namespace aes {
 		size += needed_bytes;
   }
 	
+	//
+	// reads starting at "start_index" from array "input" into state "state" using convention
+	//
 	void GetState(char** state, char* input, int start_index){
 		for (int col = 0; col < kNb; col++){
 			for (int row = 0; row < 4; row++){
@@ -256,6 +275,10 @@ namespace aes {
 		}
 	}
 	
+	//
+	// reads starting at "start_index" from array of words "words" into "state
+	// made for debug purposes, no use in the algorithm
+	//
 	void GetState(char** state, Word* words, int start_index){
 		for (int col = 0; col < kNb; col++){
 			state[0][col] = words[start_index + col].one;
@@ -265,6 +288,9 @@ namespace aes {
 		}
 	}
 	
+	//
+	// given a state "state" and output array "output", reads the state into the output array starting at index "start_index"
+	//
 	void ReadState(char** state, char* output, int start_index){
 		for (int col = 0; col < kNb; col++){
 			for (int row = 0; row < kNb; row++){
@@ -273,25 +299,36 @@ namespace aes {
 		}
 	}
 	
+	
+	//
+	// returns highest 4 bits of a byte, e.g. 9 from 0x9b
+	//
 	char GetHighNibble(char c){
 		return (((1 << 4) - 1) & c);
 	}
 	
+	//
+	// returns lowest 4 bits of a byte, e.g. b from 0x9b
+	//
 	char GetLowNibble(char c){
 		return (((1 << 4) - 1) & (c >> 4));
 	}
 	
+	//
+	// uses the s box array to substitute a specific byte with the appropriate value
+	//
 	char SubByte(char byte){
 		unsigned char c = byte;
-		//cout << hex << "byte: " << int(c) << endl;
 		unsigned char high_nibble = GetLowNibble(byte);
 		unsigned char low_nibble = GetHighNibble(byte);
-		//cout << hex << "read " << int(high_nibble) << " " << int(low_nibble) << endl;
 		return kSBox[high_nibble*16 + low_nibble];
 	}
 	
+	//
+	// calls SubByte() to substitute all bytes of a state
+	//
 	void SubBytes(char** state){
-		cout << "SubBytes" << endl;
+		//cout << "SubBytes" << endl;
 		for (int col = 0; col < kNb; col++){
 			for (int row = 0; row < 4; row++){
 				state[row][col] = SubByte(state[row][col]);
@@ -299,36 +336,46 @@ namespace aes {
 		}
 	}
 	
+	//
+	// calls SubByte() to substitute all bytes of a 4-byte word
+	//
 	Word SubWord(Word w){
 		Word result;
 		result.one = SubByte(w.one);
 		result.two = SubByte(w.two);
 		result.three = SubByte(w.three);
 		result.four = SubByte(w.four);
-		//cout << "subWord: " << result << " ";
 		return result;
 	}
 	
+	
+	//
+	// xors the individual bytes of two words
+	//
 	Word XorWords(Word a, Word b){
 		Word result;
 		result.one = a.one^b.one;
 		result.two = a.two^b.two;
 		result.three = a.three^b.three;
 		result.four = a.four^b.four;
-		//cout << "xorWord: " << result << " ";
 		return result;
 	}
 	
+	//
+	// rotates the bytes of a word according to standard
+	//
 	Word RotWord(Word w){
 		Word result;
 		result.four = w.one;
 		result.three = w.four;
 		result.two = w.three;
 		result.one = w.two;
-		//cout << "rotWord: " << result << " ";
 		return result;
 	}
 	
+	//
+	// expands the key "key" of size "nk" into a Word array "words" of length "words_length" according to AES standard
+	//
 	void ExpandKey(char* key, Word* words, int nk, int words_length){
 		for (int i = 0; i < nk; i++){
 			words[i] = Word(key[4*i], key[4*i + 1], key[4*i + 2], key[4*i + 3]);
@@ -337,28 +384,29 @@ namespace aes {
 		Word temp;
 		for (int i = nk; i < words_length; i++){
 			temp = words[i-1];
-			//cout << "temp: " << temp << " ";
 			if (i % nk == 0){
-				//cout << "kRCon[i/nk]: " << kRCon[i/nk] << " ";
 				temp = XorWords(SubWord(RotWord(temp)), kRCon[i/nk]);
 			}
 			else if ((nk > 6) && ((i%nk) == 4)) {
 				temp = SubWord(temp);
 			}
-			//cout << "w[i-nk]: " << words[i-nk] << " ";
 			words[i] = XorWords(words[i-nk], temp);
-			//cout << endl;
 		}
 	}
 	
+	//
+	// simply xors two bytes
+	//
 	char Add(char a, char b){
 		return a^b;
 	}
 	
+	//
+	// finds the appopriate multiplication table based on the first value and indexes based on the second value's nibbles
+	//
 	char Multiply(int a, char b){
-		
-		// get the appropriate lookup table
 		const int* table;
+		
 		if (a == 2)
 			table = kMul2;
 		else if (a == 3)
@@ -379,6 +427,9 @@ namespace aes {
 		return table[GetHighNibble(b) + GetLowNibble(b)*16];
 	}
 	
+	//
+	// just creates an appropriately sized state given number of columns "cols"; always 4 rows
+	//
 	char** MakeState(int cols){
 		char** state = new char*[4];
 		for(int row = 0; row < 4; row++){
@@ -387,6 +438,10 @@ namespace aes {
 		return state;
 	}
 	
+	
+	//
+	// given state "state" and array of words "words" as well as round "round", performs the AES operation AddRoundKey
+	//
 	void AddRoundKey(char** state, Word* words, int round){
 		//cout << "AddRoundKey" << endl;
 		const int l = round*kNb; 
@@ -398,8 +453,10 @@ namespace aes {
 		}
 	}
 	
+	//
+	// given state "state", performs the AES operation ShiftRows
+	//
 	void ShiftRows(char** state){
-		//cout << "ShiftRows" << endl;
 		for (int row = 1; row < 4; row++){
 			char new_vals[kNb];
 			for (int col = 0; col < kNb; col++){
@@ -411,8 +468,10 @@ namespace aes {
 		}
 	}
 	
+	//
+	// given state "state", performs the AES operation MixColumns
+	//
 	void MixColumns(char** state){
-		//cout << "MixColumns" << endl;
 		for (int col = 0; col < kNb; col++){
 			char result[4]; // 4 rows
 			result[0] = Add(
@@ -444,38 +503,35 @@ namespace aes {
 		}
 	}
 	
-	
+	//
+	// main loop function for encryption
+	//
 	void EncryptCipher(char** in_state, char* raw_input, char** out_state, char* raw_output, int offset, Word* key_words, int nr){
-    GetState(in_state, raw_input, offset);
-    //PrintState(in_state);
-    
+    GetState(in_state, raw_input, offset); // read into state
+
     // start actual cipher
-    AddRoundKey(in_state, key_words, 0);
-    //PrintState(in_state);
-    
+    AddRoundKey(in_state, key_words, 0); // first round
+
     for (int round = 1; round < nr; round++){
-    	cout << "round " << round << endl;
     	SubBytes(in_state);
-    	//PrintState(in_state);
     	ShiftRows(in_state);
-    	//PrintState(in_state);
     	MixColumns(in_state);
-    	//PrintState(in_state);
     	AddRoundKey(in_state, key_words, round);
-    	//PrintState(in_state);
     }
-    cout << "round " << nr << endl;
+    
+    // last round
     SubBytes(in_state);
-    //PrintState(in_state);
     ShiftRows(in_state);
-    //PrintState(in_state);
     AddRoundKey(in_state, key_words, nr);
-    //PrintState(in_state);
     
     // output
     ReadState(in_state, raw_output, offset);
 	}
 	
+	
+	//
+	// base function for encryption
+	//
   void Encrypt(char* raw_input, char* raw_key, char* raw_output, int key_size, int& input_size){
     Pad(raw_input, input_size); // pad the input appropriately
     
@@ -487,23 +543,18 @@ namespace aes {
     	cout << "padding size error" << endl;
     	return;
     }
-    	
-    // set up our state arrays
-
-  	
+    
   	// get our key expansion (word array)
   	const int expanded_key_size = kNb*(kNr+1);
   	Word* key_word_array = new Word[expanded_key_size]; // each word is 4 bytes
-    ExpandKey(raw_key, key_word_array, kNk, kNb*(kNr+1));
-    //PrintWords(key_word_array, expanded_key_size);
-    
+    ExpandKey(raw_key, key_word_array, kNk, kNb*(kNr+1)); // get expanded key
+
     char** in_state = MakeState(kNb);
   	char** out_state = MakeState(kNb);
     // set up main cipher loop
     for (int i = 0; i < input_size; i += 16){	
 		  EncryptCipher(in_state, raw_input, out_state, raw_output, i, key_word_array, kNr);
     }
-    //PrintData(raw_output, input_size);
   }
   
   void decrypt(char* raw_input, char* raw_key, char* raw_output, int key_size, int input_size){
@@ -511,6 +562,8 @@ namespace aes {
   }
   
 } // end namespace
+
+
 
 int main (int argc, char *argv[]){
 	int key_size = -1;
@@ -601,7 +654,7 @@ int main (int argc, char *argv[]){
 		return 1;	
 	}
 	
-	cout << "seen key size: " << key_file_stream.tellg() << " bytes" << endl;
+	//cout << "seen key size: " << key_file_stream.tellg() << " bytes" << endl;
 	if (key_file_stream.tellg() != key_size/8){
 		cout << "key size mismatch, expected " << key_size << " bits, got " << key_file_stream.tellg() * 8 << " bits." << endl;
 		return 1;
@@ -617,7 +670,7 @@ int main (int argc, char *argv[]){
 	}
 	
 	input_size = input_file_stream.tellg();
-	cout << "seen input size: " << input_size << " bytes" << endl;
+	//cout << "seen input size: " << input_size << " bytes" << endl;
 	input_file_stream.seekg(0, input_file_stream.beg); // go back to start of file
 
 	// open output file
@@ -651,6 +704,8 @@ int main (int argc, char *argv[]){
 	}
 	
 	output_file_stream.write(raw_output, input_size);
+	
+	cout << "Done, results written to " << output_file << endl;
 	
 	input_file_stream.close();
 	key_file_stream.close();
