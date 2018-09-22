@@ -111,10 +111,21 @@ namespace aes {
 		}
 	}
 	
+	char get_high_nibble(char c){
+		return (((1 << 4) - 1) & c);
+	}
+	
+	char get_low_nibble(char c){
+		return (((1 << 4) - 1) & (c >> 4));
+	}
+	
 	char sub_byte(char byte){
-		int first_nibble = byte & 0x0F;
-		int second_nibble = byte & 0xF0;
-		return s_box[first_nibble*16 + second_nibble];
+		unsigned char c = byte;
+		//cout << hex << "byte: " << int(c) << endl;
+		unsigned char high_nibble = get_low_nibble(byte);
+		unsigned char low_nibble = get_high_nibble(byte);
+		//cout << hex << "read " << int(high_nibble) << " " << int(low_nibble) << endl;
+		return s_box[high_nibble*16 + low_nibble];
 	}
 	
 	void sub_bytes(char** state){
@@ -186,7 +197,8 @@ namespace aes {
     key_expansion(raw_key, word_array, nk, nb*(nr+1));
     print_data(raw_key, key_size/8);
     for(int i = 0; i < key_size/8; i++){
-    	cout << hex << int(sub_byte(raw_key[i])) << " ";
+      unsigned char c = sub_byte(raw_key[i]);
+    	cout << hex << int(c) << " ";
     }
     cout << endl;
     
