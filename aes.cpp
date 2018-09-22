@@ -303,14 +303,14 @@ namespace aes {
 	//
 	// returns highest 4 bits of a byte, e.g. 9 from 0x9b
 	//
-	char GetHighNibble(char c){
+	char GetLowNibble(char c){
 		return (((1 << 4) - 1) & c);
 	}
 	
 	//
 	// returns lowest 4 bits of a byte, e.g. b from 0x9b
 	//
-	char GetLowNibble(char c){
+	char GetHighNibble(char c){
 		return (((1 << 4) - 1) & (c >> 4));
 	}
 	
@@ -319,8 +319,8 @@ namespace aes {
 	//
 	char SubByte(char byte){
 		unsigned char c = byte;
-		unsigned char high_nibble = GetLowNibble(byte);
-		unsigned char low_nibble = GetHighNibble(byte);
+		unsigned char high_nibble = GetHighNibble(byte);
+		unsigned char low_nibble = GetLowNibble(byte);
 		return kSBox[high_nibble*16 + low_nibble];
 	}
 	
@@ -424,7 +424,7 @@ namespace aes {
 			return 0;
 		}
 		
-		return table[GetHighNibble(b) + GetLowNibble(b)*16];
+		return table[GetLowNibble(b) + GetHighNibble(b)*16];
 	}
 	
 	//
@@ -443,7 +443,7 @@ namespace aes {
 	// given state "state" and array of words "words" as well as round "round", performs the AES operation AddRoundKey
 	//
 	void AddRoundKey(char** state, Word* words, int round){
-		//cout << "AddRoundKey" << endl;
+		cout << "AddRoundKey" << endl;
 		const int l = round*kNb; 
 		for (int col = 0; col < kNb; col++){
 			state[0][col] = Add(state[0][col], words[l+col].one);
@@ -561,6 +561,7 @@ namespace aes {
 	// given state "state", performs the AES operation InvShiftRows, which just reverses ShiftRows
 	//
   void InvShiftRows(char** state){
+  	cout << "InvShiftRows" << endl;
   	for (int row = 1; row < 4; row++){
 			char new_vals[kNb];
 			for (int col = 0; col < kNb; col++){
@@ -581,8 +582,9 @@ namespace aes {
 	//
 	char InvSubByte(char byte){
 		unsigned char c = byte;
-		unsigned char high_nibble = GetLowNibble(byte);
-		unsigned char low_nibble = GetHighNibble(byte);
+		unsigned char high_nibble = GetHighNibble(byte);
+		unsigned char low_nibble = GetLowNibble(byte);
+		//cout << "high nibble: " << high_nibble << ", low nibble: " << low_nibble << endl;
 		return kInverseSBox[high_nibble*16 + low_nibble];
 	}
 	
@@ -591,10 +593,10 @@ namespace aes {
 	// calls InvSubByte() to substitute all bytes of a state
 	//
   void InvSubBytes(char** state){
-  	//cout << "InvSubBytes" << endl;
+  	cout << "InvSubBytes" << endl;
 		for (int col = 0; col < kNb; col++){
 			for (int row = 0; row < 4; row++){
-				state[row][col] = SubByte(state[row][col]);
+				state[row][col] = InvSubByte(state[row][col]);
 			}
 		}
   }
@@ -603,6 +605,7 @@ namespace aes {
 	// given state "state", performs the AES operation InvMixColumns
 	//
   void InvMixColumns(char** state){
+  	cout << "InvMixColumns" << endl;
   	for (int col = 0; col < kNb; col++){
 			char result[4]; // 4 rows
 			result[0] = Add(
@@ -643,20 +646,31 @@ namespace aes {
 	void DecryptCipher(char** in_state, char* raw_input, char** out_state, char* raw_output, int offset, Word* key_words, int nr){
     GetState(in_state, raw_input, offset); // read into state
 
+		cout << "start decryption" << endl;
+		PrintState(in_state);
     // start actual cipher
     AddRoundKey(in_state, key_words, nr); // invert last round
 
     for (int round = (nr-1); round > 0; round--){
+    	cout << "round " << round << endl;
+    	PrintState(in_state);	
       InvShiftRows(in_state);
+      PrintState(in_state);
     	InvSubBytes(in_state);
+    	PrintState(in_state);
     	AddRoundKey(in_state, key_words, round);
+    	PrintState(in_state);
     	InvMixColumns(in_state);
+    	PrintState(in_state);
     }
     
     // invert first round
     InvShiftRows(in_state);
+    PrintState(in_state);
     InvSubBytes(in_state);
+    PrintState(in_state);
 		AddRoundKey(in_state, key_words, 0);
+		PrintState(in_state);
     
     // output
     ReadState(in_state, raw_output, offset);
