@@ -31,11 +31,13 @@ Next, we expand our key with a call to ExpandKey. This creates an array of words
 
 Now that we have our key, we enter into a loop, processing 16 bytes of our input at a time and running EncryptCipher on them. When we're done, we return to main, where our output is written.
 
-EncryptCipher: This main processing function starts by reading input data into a state. We then call AddRoundKey an initial time before entering a loop for the remaining rounds (minus the last round). Each round calls SubBytes, ShiftRows, MixColumns, and AddRoundKey on our input data. The final round does not mix columns, but performs all other functions. Finally, we output our data from the state to our output buffer at the appropriate location.
+## EncryptCipher
+This main processing function starts by reading input data into a state. We then call AddRoundKey an initial time before entering a loop for the remaining rounds (minus the last round). Each round calls SubBytes, ShiftRows, MixColumns, and AddRoundKey on our input data. The final round does not mix columns, but performs all other functions. Finally, we output our data from the state to our output buffer at the appropriate location.
 
-XorWords: Takes two Words (4-byte structures) and simply returns a new Word with the bytes of each parameter Word xored together.
+## XorWords
+Takes two Words (4-byte structures) and simply returns a new Word with the bytes of each parameter Word xored together.
 
-SubWord: Using the S-Box, we substitute each byte in the word with the S-box table, using high-nibble as row and low-nibble as column to lookup the correct value.
+## SubWord: Using the S-Box, we substitute each byte in the word with the S-box table, using high-nibble as row and low-nibble as column to lookup the correct value.
 
 RotWord: Rotates the bytes of a word very simply, moving each byte one space to the "left" (or "up") with wraparound.
 
