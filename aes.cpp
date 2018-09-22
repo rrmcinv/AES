@@ -17,6 +17,21 @@
 
 using namespace std;
 
+namespace aes{
+  struct word {
+  	unsigned char one, two, three, four;
+  	word(char firstword, char secondword, char thirdword, char fourthword){
+  		one = firstword;
+  		two = secondword;
+  		three = thirdword;
+  		four = fourthword;
+  	}
+  	word(){}
+  };
+}
+
+using namespace aes;
+
 const int nb = 4; // number of columns & rows in state per standard
 
 const int s_box[256] =  
@@ -54,25 +69,33 @@ const int s_box[256] =
  ,0x60 ,0x51 ,0x7f ,0xa9 ,0x19 ,0xb5 ,0x4a ,0x0d ,0x2d ,0xe5 ,0x7a ,0x9f ,0x93 ,0xc9 ,0x9c ,0xef
  ,0xa0 ,0xe0 ,0x3b ,0x4d ,0xae ,0x2a ,0xf5 ,0xb0 ,0xc8 ,0xeb ,0xbb ,0x3c ,0x83 ,0x53 ,0x99 ,0x61
  ,0x17 ,0x2b ,0x04 ,0x7e ,0xba ,0x77 ,0xd6 ,0x26 ,0xe1 ,0x69 ,0x14 ,0x63 ,0x55 ,0x21 ,0x0c ,0x7d};
+ 
+ const word rcon[11] =
+ { word(0,0,0,0),
+ word(0x01, 0, 0, 0),
+ word(0x02, 0, 0, 0),
+ word(0x04, 0, 0, 0),
+ word(0x08, 0, 0, 0),
+ word(0x10, 0, 0, 0),
+ word(0x20, 0, 0, 0),
+ word(0x40, 0, 0, 0),
+ word(0x80, 0, 0, 0),
+ word(0x1b, 0, 0, 0),
+ word(0x36, 0, 0, 0)
+ };
+
+ostream& operator<< (ostream &os, const word& w){
+	os << hex << setw(2) << setfill('0') << (int)w.one << setw(2) << setfill('0') << (int)w.two << setw(2) << setfill('0') << (int)w.three << setw(2) << setfill('0') << (int)w.four;
+	return os;
+}
 
 namespace aes {
-  
-  struct word {
-  	char one, two, three, four;
-  	word(char firstword, char secondword, char thirdword, char fourthword){
-  		one = firstword;
-  		two = secondword;
-  		three = thirdword;
-  		four = fourthword;
-  	}
-  	word(){}
-  };
   
   // mostly for debug purposes
   void print_data(char* data, int size, int start = 0){
   	for(int i = start; i < (start + size); i++){
   		unsigned char c = data[i];
-    	cout << hex << (int)c << " ";
+    	cout << hex << setw(2) << setfill('0') << (int)c << " ";
     }
     cout << endl;
   }
@@ -80,10 +103,21 @@ namespace aes {
   void print_state(char** state){
   	for(int j = 0; j < nb; j++){
   		for(int i = 0; i < nb; i++){
-  			cout << int(state[j][i]) << " ";
+  			unsigned char c = state[j][i];
+  			cout << hex << setw(2) << setfill('0') << (int)c << " ";
   		}
   			cout << endl;
   	}
+  }
+  
+  void print_words(word* words, int size){
+  	for (int i = 0; i < size; i++){
+  		cout << words[i];
+  		if (i%6 == 0) 
+  			cout << endl;
+  		cout << " ";
+  	}
+  	cout << endl;
   }
   
   // pad input using CMS method
@@ -97,7 +131,7 @@ namespace aes {
 	
 	void get_state(char** state, char* input, int start_index){
 		for (int i = 0; i < nb; i++){
-			for (int j = 0; j < nb; j++){
+			for (int j = 0; j < 4; j++){
 				state[j][i] = input[start_index + j + 4*i];
 			}
 		}
@@ -128,12 +162,22 @@ namespace aes {
 		return s_box[high_nibble*16 + low_nibble];
 	}
 	
-	void sub_bytes(char** state){
-	
+	void sub_bytes(char** state, int nb){
+		for (int i = 0; i < nb; i++){
+			for (int j = 0; j < 4; j++){
+				state[j][i] = sub_byte(state[j][i]);
+			}
+		}
 	}
 	
-	void sub_words(word* words){
-	
+	word sub_word(word w){
+		word result;
+		result.one = sub_byte(w.one);
+		result.two = sub_byte(w.two);
+		result.three = sub_byte(w.three);
+		result.four = sub_byte(w.four);
+		//cout << "subWord: " << result << " ";
+		return result;
 	}
 	
 	word xor_words(word a, word b){
@@ -142,6 +186,17 @@ namespace aes {
 		result.two = a.two^b.two;
 		result.three = a.three^b.three;
 		result.four = a.four^b.four;
+		//cout << "xorWord: " << result << " ";
+		return result;
+	}
+	
+	word rot_word(word w){
+		word result;
+		result.four = w.one;
+		result.three = w.four;
+		result.two = w.three;
+		result.one = w.two;
+		//cout << "rotWord: " << result << " ";
 		return result;
 	}
 	
@@ -153,13 +208,17 @@ namespace aes {
 		word temp;
 		for (int i = nk; i < words_length; i++){
 			temp = words[i-1];
+			//cout << "temp: " << temp << " ";
 			if (i % nk == 0){
-				
+				//cout << "rcon[i/nk]: " << rcon[i/nk] << " ";
+				temp = xor_words(sub_word(rot_word(temp)), rcon[i/nk]);
 			}
 			else if ((nk > 6) && ((i%nk) == 4)) {
-			
+				temp = sub_word(temp);
 			}
+			//cout << "w[i-nk]: " << words[i-nk] << " ";
 			words[i] = xor_words(words[i-nk], temp);
+			//cout << endl;
 		}
 	}
 	
@@ -195,18 +254,13 @@ namespace aes {
   	const int expanded_key_size = nb*(nr+1);
   	word* word_array = new word[expanded_key_size]; // each word is 4 bytes
     key_expansion(raw_key, word_array, nk, nb*(nr+1));
-    print_data(raw_key, key_size/8);
-    for(int i = 0; i < key_size/8; i++){
-      unsigned char c = sub_byte(raw_key[i]);
-    	cout << hex << int(c) << " ";
-    }
-    cout << endl;
+    //print_words(word_array, expanded_key_size);
     
     // set up main cipher loop
     for (int i = 0; i < input_size; i += 16){	
 		  get_state(in_state, raw_input, i);
-		  print_data(raw_input, nb*nb, i);
-		  print_state(in_state);
+		  //print_data(raw_input, nb*nb, i);
+		  //print_state(in_state);
     }
   }
   
@@ -215,8 +269,6 @@ namespace aes {
   }
   
 } // end namespace
-
-using namespace aes;
 
 int main (int argc, char *argv[]){
 	int key_size = -1;
@@ -339,7 +391,6 @@ int main (int argc, char *argv[]){
   char* raw_output;
   
   key_file_stream.read(raw_key, key_size/8);
-  print_data(raw_key, key_size/8);
 
   
   // done storing data, call primary functions
@@ -356,8 +407,6 @@ int main (int argc, char *argv[]){
 		input_file_stream.read(raw_input, input_size); 
 	  decrypt(raw_input, raw_key, raw_output, key_size, input_size);
 	}
-
-
 	
 	input_file_stream.close();
 	key_file_stream.close();
