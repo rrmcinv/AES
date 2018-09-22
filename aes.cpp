@@ -256,7 +256,7 @@ namespace aes {
   // will ALWAYS pad, even if input size is already divisible by 16
   // pads with a number equal to the number of bytes padded
   //
-  void Pad(char* bytes, int &size){
+  void Pad(char* bytes, long long &size){
     int needed_bytes = 16 - size % 16;
     for (int i = size; i < (size + needed_bytes); i++){
     	bytes[i] = needed_bytes;
@@ -268,7 +268,7 @@ namespace aes {
 	// depads output assuming CMS method
 	// doesn't actually delete data (which would be difficult), just adjusts size based on the number it sees
 	//
-	void DePad(char* bytes, int &size){
+	void DePad(char* bytes, long long &size){
 		unsigned char pad = bytes[size-1];
 		size -= pad;
 	}
@@ -541,9 +541,9 @@ namespace aes {
 	//
 	// base function for encryption
 	//
-  void Encrypt(char* raw_input, char* raw_key, char* raw_output, int key_size, int& input_size){
+  void Encrypt(char* raw_input, char* raw_key, char* raw_output, int key_size, long long& input_size){
     Pad(raw_input, input_size); // pad the input appropriately
-    
+
     const int kWordSize = 32; // 4 bytes
     const int kNk = key_size/kWordSize; // standard variable, words in the key
     const int kNr = kNk + 6; // standard variable, should be either 10 or 14 depending on key_size; number of rounds
@@ -675,7 +675,7 @@ namespace aes {
 	}
   
   // base function for decryption
-  void Decrypt(char* raw_input, char* raw_key, char* raw_output, int key_size, int &input_size){
+  void Decrypt(char* raw_input, char* raw_key, char* raw_output, int key_size, long long &input_size){
   	const int kWordSize = 32; // 4 bytes
     const int kNk = key_size/kWordSize; // standard variable, words in the key
     const int kNr = kNk + 6; // standard variable, should be either 10 or 14 depending on key_size; number of rounds
@@ -702,7 +702,7 @@ namespace aes {
 
 int main (int argc, char *argv[]){
 	int key_size = -1;
-	int input_size = -1;
+	long long input_size = -1;
 	string key_file = "";
 	string input_file = "";
 	string output_file = "";
@@ -822,12 +822,15 @@ int main (int argc, char *argv[]){
   
   key_file_stream.read(raw_key, key_size/8);
 
-  
   // done storing data, call primary functions
 	
+	
+	
 	if (mode == "encrypt"){
-		raw_input = new char[input_size/16 + 16]; // add extra space for the padding
-		raw_output = new char[input_size/16 + 16]; 
+		int increased_size = 16 - input_size%16; // needed space for padding
+		//cout << "size is " << input_size + increased_size << endl;
+		raw_input = new char[input_size + increased_size]; // add extra space for the padding
+		raw_output = new char[input_size + increased_size]; 
 		input_file_stream.read(raw_input, input_size); 
 	  Encrypt(raw_input, raw_key, raw_output, key_size, input_size);
 	  }
@@ -845,7 +848,6 @@ int main (int argc, char *argv[]){
 	input_file_stream.close();
 	key_file_stream.close();
 	output_file_stream.close();
-
 
 	return 0;
 }
