@@ -18,23 +18,25 @@
 using namespace std;
 
 namespace aes{
-  struct word {
+	// 4 bytes, used in the key expansion
+  struct Word {
   	unsigned char one, two, three, four;
-  	word(char firstword, char secondword, char thirdword, char fourthword){
+  	Word(char firstword, char secondword, char thirdword, char fourthword){
   		one = firstword;
   		two = secondword;
   		three = thirdword;
   		four = fourthword;
   	}
-  	word(){}
+  	Word(){}
   };
 }
 
 using namespace aes;
 
-const int nb = 4; // number of columns & rows in state per standard
+const int kNb = 4; // number of columns & rows in state per standard
 
-const int s_box[256] =  
+// sboxes for SubByte and its inverse
+const int kSBox[256] =  
  {0x63 ,0x7c ,0x77 ,0x7b ,0xf2 ,0x6b ,0x6f ,0xc5 ,0x30 ,0x01 ,0x67 ,0x2b ,0xfe ,0xd7 ,0xab ,0x76
  ,0xca ,0x82 ,0xc9 ,0x7d ,0xfa ,0x59 ,0x47 ,0xf0 ,0xad ,0xd4 ,0xa2 ,0xaf ,0x9c ,0xa4 ,0x72 ,0xc0
  ,0xb7 ,0xfd ,0x93 ,0x26 ,0x36 ,0x3f ,0xf7 ,0xcc ,0x34 ,0xa5 ,0xe5 ,0xf1 ,0x71 ,0xd8 ,0x31 ,0x15
@@ -52,7 +54,7 @@ const int s_box[256] =
  ,0xe1 ,0xf8 ,0x98 ,0x11 ,0x69 ,0xd9 ,0x8e ,0x94 ,0x9b ,0x1e ,0x87 ,0xe9 ,0xce ,0x55 ,0x28 ,0xdf
  ,0x8c ,0xa1 ,0x89 ,0x0d ,0xbf ,0xe6 ,0x42 ,0x68 ,0x41 ,0x99 ,0x2d ,0x0f ,0xb0 ,0x54 ,0xbb ,0x16};
  
- const int inverse_s_box[256] =
+ const int kInversekSBox[256] =
  {0x52 ,0x09 ,0x6a ,0xd5 ,0x30 ,0x36 ,0xa5 ,0x38 ,0xbf ,0x40 ,0xa3 ,0x9e ,0x81 ,0xf3 ,0xd7 ,0xfb
  ,0x7c ,0xe3 ,0x39 ,0x82 ,0x9b ,0x2f ,0xff ,0x87 ,0x34 ,0x8e ,0x43 ,0x44 ,0xc4 ,0xde ,0xe9 ,0xcb
  ,0x54 ,0x7b ,0x94 ,0x32 ,0xa6 ,0xc2 ,0x23 ,0x3d ,0xee ,0x4c ,0x95 ,0x0b ,0x42 ,0xfa ,0xc3 ,0x4e
@@ -70,7 +72,8 @@ const int s_box[256] =
  ,0xa0 ,0xe0 ,0x3b ,0x4d ,0xae ,0x2a ,0xf5 ,0xb0 ,0xc8 ,0xeb ,0xbb ,0x3c ,0x83 ,0x53 ,0x99 ,0x61
  ,0x17 ,0x2b ,0x04 ,0x7e ,0xba ,0x77 ,0xd6 ,0x26 ,0xe1 ,0x69 ,0x14 ,0x63 ,0x55 ,0x21 ,0x0c ,0x7d};
  
- const int mul2[256] = {
+ // multiplication tables for AES's version of multiplication
+ const int kMul2[256] = {
 	0x00, 0x02, 0x04, 0x06, 0x08, 0x0a, 0x0c, 0x0e, 0x10, 0x12, 0x14, 0x16, 0x18, 0x1a, 0x1c, 0x1e,
 	0x20, 0x22, 0x24, 0x26, 0x28, 0x2a, 0x2c, 0x2e, 0x30, 0x32, 0x34, 0x36, 0x38, 0x3a, 0x3c, 0x3e,
 	0x40, 0x42, 0x44, 0x46, 0x48, 0x4a, 0x4c, 0x4e, 0x50, 0x52, 0x54, 0x56, 0x58, 0x5a, 0x5c, 0x5e,
@@ -89,7 +92,7 @@ const int s_box[256] =
 	0xfb, 0xf9, 0xff, 0xfd, 0xf3, 0xf1, 0xf7, 0xf5, 0xeb, 0xe9, 0xef, 0xed, 0xe3, 0xe1, 0xe7, 0xe5,
 };
 
-const int mul3[256]={
+const int kMul3[256]={
 	0x00, 0x03, 0x06, 0x05, 0x0c, 0x0f, 0x0a, 0x09, 0x18, 0x1b, 0x1e, 0x1d, 0x14, 0x17, 0x12, 0x11,
 	0x30, 0x33, 0x36, 0x35, 0x3c, 0x3f, 0x3a, 0x39, 0x28, 0x2b, 0x2e, 0x2d, 0x24, 0x27, 0x22, 0x21,
 	0x60, 0x63, 0x66, 0x65, 0x6c, 0x6f, 0x6a, 0x69, 0x78, 0x7b, 0x7e, 0x7d, 0x74, 0x77, 0x72, 0x71,
@@ -108,7 +111,7 @@ const int mul3[256]={
 	0x0b, 0x08, 0x0d, 0x0e, 0x07, 0x04, 0x01, 0x02, 0x13, 0x10, 0x15, 0x16, 0x1f, 0x1c, 0x19, 0x1a,
 };
 
-const int mul9[256] ={
+const int kMul9[256] ={
 	0x00, 0x09, 0x12, 0x1b, 0x24, 0x2d, 0x36, 0x3f, 0x48, 0x41, 0x5a, 0x53, 0x6c, 0x65, 0x7e, 0x77,
 	0x90, 0x99, 0x82, 0x8b, 0xb4, 0xbd, 0xa6, 0xaf, 0xd8, 0xd1, 0xca, 0xc3, 0xfc, 0xf5, 0xee, 0xe7,
 	0x3b, 0x32, 0x29, 0x20, 0x1f, 0x16, 0x0d, 0x04, 0x73, 0x7a, 0x61, 0x68, 0x57, 0x5e, 0x45, 0x4c,
@@ -127,7 +130,7 @@ const int mul9[256] ={
 	0x31, 0x38, 0x23, 0x2a, 0x15, 0x1c, 0x07, 0x0e, 0x79, 0x70, 0x6b, 0x62, 0x5d, 0x54, 0x4f, 0x46,
 };
 
-const int mul11[256] = {
+const int kMul11[256] = {
 	0x00, 0x0b, 0x16, 0x1d, 0x2c, 0x27, 0x3a, 0x31, 0x58, 0x53, 0x4e, 0x45, 0x74, 0x7f, 0x62, 0x69,
 	0xb0, 0xbb, 0xa6, 0xad, 0x9c, 0x97, 0x8a, 0x81, 0xe8, 0xe3, 0xfe, 0xf5, 0xc4, 0xcf, 0xd2, 0xd9,
 	0x7b, 0x70, 0x6d, 0x66, 0x57, 0x5c, 0x41, 0x4a, 0x23, 0x28, 0x35, 0x3e, 0x0f, 0x04, 0x19, 0x12,
@@ -146,7 +149,7 @@ const int mul11[256] = {
 	0xca, 0xc1, 0xdc, 0xd7, 0xe6, 0xed, 0xf0, 0xfb, 0x92, 0x99, 0x84, 0x8f, 0xbe, 0xb5, 0xa8, 0xa3,
 };
 
-const int mul13[256]= {
+const int kMul13[256]= {
 	0x00, 0x0d, 0x1a, 0x17, 0x34, 0x39, 0x2e, 0x23, 0x68, 0x65, 0x72, 0x7f, 0x5c, 0x51, 0x46, 0x4b,
 	0xd0, 0xdd, 0xca, 0xc7, 0xe4, 0xe9, 0xfe, 0xf3, 0xb8, 0xb5, 0xa2, 0xaf, 0x8c, 0x81, 0x96, 0x9b,
 	0xbb, 0xb6, 0xa1, 0xac, 0x8f, 0x82, 0x95, 0x98, 0xd3, 0xde, 0xc9, 0xc4, 0xe7, 0xea, 0xfd, 0xf0,
@@ -165,7 +168,7 @@ const int mul13[256]= {
 	0xdc, 0xd1, 0xc6, 0xcb, 0xe8, 0xe5, 0xf2, 0xff, 0xb4, 0xb9, 0xae, 0xa3, 0x80, 0x8d, 0x9a, 0x97,
 };
 
-const int mul14[256] = {
+const int kMul14[256] = {
 	0x00, 0x0e, 0x1c, 0x12, 0x38, 0x36, 0x24, 0x2a, 0x70, 0x7e, 0x6c, 0x62, 0x48, 0x46, 0x54, 0x5a,
 	0xe0, 0xee, 0xfc, 0xf2, 0xd8, 0xd6, 0xc4, 0xca, 0x90, 0x9e, 0x8c, 0x82, 0xa8, 0xa6, 0xb4, 0xba,
 	0xdb, 0xd5, 0xc7, 0xc9, 0xe3, 0xed, 0xff, 0xf1, 0xab, 0xa5, 0xb7, 0xb9, 0x93, 0x9d, 0x8f, 0x81,
@@ -184,21 +187,22 @@ const int mul14[256] = {
 	0xd7, 0xd9, 0xcb, 0xc5, 0xef, 0xe1, 0xf3, 0xfd, 0xa7, 0xa9, 0xbb, 0xb5, 0x9f, 0x91, 0x83, 0x8d,
 };
  
- const word rcon[11] =
- { word(0,0,0,0),
- word(0x01, 0, 0, 0),
- word(0x02, 0, 0, 0),
- word(0x04, 0, 0, 0),
- word(0x08, 0, 0, 0),
- word(0x10, 0, 0, 0),
- word(0x20, 0, 0, 0),
- word(0x40, 0, 0, 0),
- word(0x80, 0, 0, 0),
- word(0x1b, 0, 0, 0),
- word(0x36, 0, 0, 0)
+ // round constant word array
+ const Word kRCon[11] =
+ { Word(0,0,0,0),
+ Word(0x01, 0, 0, 0),
+ Word(0x02, 0, 0, 0),
+ Word(0x04, 0, 0, 0),
+ Word(0x08, 0, 0, 0),
+ Word(0x10, 0, 0, 0),
+ Word(0x20, 0, 0, 0),
+ Word(0x40, 0, 0, 0),
+ Word(0x80, 0, 0, 0),
+ Word(0x1b, 0, 0, 0),
+ Word(0x36, 0, 0, 0)
  };
 
-ostream& operator<< (ostream &os, const word& w){
+ostream& operator<< (ostream &os, const Word& w){
 	os << hex << setw(2) << setfill('0') << (int)w.one << setw(2) << setfill('0') << (int)w.two << setw(2) << setfill('0') << (int)w.three << setw(2) << setfill('0') << (int)w.four;
 	return os;
 }
@@ -206,7 +210,7 @@ ostream& operator<< (ostream &os, const word& w){
 namespace aes {
   
   // mostly for debug purposes
-  void print_data(char* data, int size, int start = 0){
+  void PrintData(char* data, int size, int start = 0){
   	for(int i = start; i < (start + size); i++){
   		unsigned char c = data[i];
     	cout << hex << setw(2) << setfill('0') << (int)c << " ";
@@ -214,9 +218,9 @@ namespace aes {
     cout << endl;
   }
   
-  void print_state(char** state){
+  void PrintState(char** state){
   	for(int row = 0; row < 4; row++){
-  		for(int col = 0; col < nb; col++){
+  		for(int col = 0; col < kNb; col++){
   			unsigned char c = state[row][col];
   			cout << hex << setw(2) << setfill('0') << (int)c << " ";
   		}
@@ -225,7 +229,7 @@ namespace aes {
   	cout << endl;
   }
   
-  void print_words(word* words, int size){
+  void PrintWords(Word* words, int size){
   	for (int i = 0; i < size; i++){
   		cout << words[i];
   		if (i%6 == 0) 
@@ -236,7 +240,7 @@ namespace aes {
   }
   
   // pad input using CMS method
-  void pad(char* bytes, int &size){
+  void Pad(char* bytes, int &size){
     int needed_bytes = 16 - size % 16;
     for (int i = size; i < (size + needed_bytes); i++){
     	bytes[i] = needed_bytes;
@@ -244,16 +248,16 @@ namespace aes {
 		size += needed_bytes;
   }
 	
-	void get_state(char** state, char* input, int start_index){
-		for (int col = 0; col < nb; col++){
+	void GetState(char** state, char* input, int start_index){
+		for (int col = 0; col < kNb; col++){
 			for (int row = 0; row < 4; row++){
 				state[row][col] = input[start_index + row + 4*col];
 			}
 		}
 	}
 	
-	void get_state(char** state, word* words, int start_index){
-		for (int col = 0; col < nb; col++){
+	void GetState(char** state, Word* words, int start_index){
+		for (int col = 0; col < kNb; col++){
 			state[0][col] = words[start_index + col].one;
 			state[1][col] = words[start_index + col].two;
 			state[2][col] = words[start_index + col].three;
@@ -261,52 +265,52 @@ namespace aes {
 		}
 	}
 	
-	void read_state(char** state, char* output, int start_index){
-		for (int col = 0; col < nb; col++){
-			for (int row = 0; row < nb; row++){
+	void ReadState(char** state, char* output, int start_index){
+		for (int col = 0; col < kNb; col++){
+			for (int row = 0; row < kNb; row++){
 				output[start_index + row + 4*col] = state[row][col];
 			}
 		}
 	}
 	
-	char get_high_nibble(char c){
+	char GetHighNibble(char c){
 		return (((1 << 4) - 1) & c);
 	}
 	
-	char get_low_nibble(char c){
+	char GetLowNibble(char c){
 		return (((1 << 4) - 1) & (c >> 4));
 	}
 	
-	char sub_byte(char byte){
+	char SubByte(char byte){
 		unsigned char c = byte;
 		//cout << hex << "byte: " << int(c) << endl;
-		unsigned char high_nibble = get_low_nibble(byte);
-		unsigned char low_nibble = get_high_nibble(byte);
+		unsigned char high_nibble = GetLowNibble(byte);
+		unsigned char low_nibble = GetHighNibble(byte);
 		//cout << hex << "read " << int(high_nibble) << " " << int(low_nibble) << endl;
-		return s_box[high_nibble*16 + low_nibble];
+		return kSBox[high_nibble*16 + low_nibble];
 	}
 	
-	void sub_bytes(char** state){
-		cout << "sub_bytes" << endl;
-		for (int col = 0; col < nb; col++){
+	void SubBytes(char** state){
+		cout << "SubBytes" << endl;
+		for (int col = 0; col < kNb; col++){
 			for (int row = 0; row < 4; row++){
-				state[row][col] = sub_byte(state[row][col]);
+				state[row][col] = SubByte(state[row][col]);
 			}
 		}
 	}
 	
-	word sub_word(word w){
-		word result;
-		result.one = sub_byte(w.one);
-		result.two = sub_byte(w.two);
-		result.three = sub_byte(w.three);
-		result.four = sub_byte(w.four);
+	Word SubWord(Word w){
+		Word result;
+		result.one = SubByte(w.one);
+		result.two = SubByte(w.two);
+		result.three = SubByte(w.three);
+		result.four = SubByte(w.four);
 		//cout << "subWord: " << result << " ";
 		return result;
 	}
 	
-	word xor_words(word a, word b){
-		word result;
+	Word XorWords(Word a, Word b){
+		Word result;
 		result.one = a.one^b.one;
 		result.two = a.two^b.two;
 		result.three = a.three^b.three;
@@ -315,8 +319,8 @@ namespace aes {
 		return result;
 	}
 	
-	word rot_word(word w){
-		word result;
+	Word RotWord(Word w){
+		Word result;
 		result.four = w.one;
 		result.three = w.four;
 		result.two = w.three;
@@ -325,57 +329,57 @@ namespace aes {
 		return result;
 	}
 	
-	void key_expansion(char* key, word* words, int nk, int words_length){
+	void ExpandKey(char* key, Word* words, int nk, int words_length){
 		for (int i = 0; i < nk; i++){
-			words[i] = word(key[4*i], key[4*i + 1], key[4*i + 2], key[4*i + 3]);
+			words[i] = Word(key[4*i], key[4*i + 1], key[4*i + 2], key[4*i + 3]);
 		}
 		
-		word temp;
+		Word temp;
 		for (int i = nk; i < words_length; i++){
 			temp = words[i-1];
 			//cout << "temp: " << temp << " ";
 			if (i % nk == 0){
-				//cout << "rcon[i/nk]: " << rcon[i/nk] << " ";
-				temp = xor_words(sub_word(rot_word(temp)), rcon[i/nk]);
+				//cout << "kRCon[i/nk]: " << kRCon[i/nk] << " ";
+				temp = XorWords(SubWord(RotWord(temp)), kRCon[i/nk]);
 			}
 			else if ((nk > 6) && ((i%nk) == 4)) {
-				temp = sub_word(temp);
+				temp = SubWord(temp);
 			}
 			//cout << "w[i-nk]: " << words[i-nk] << " ";
-			words[i] = xor_words(words[i-nk], temp);
+			words[i] = XorWords(words[i-nk], temp);
 			//cout << endl;
 		}
 	}
 	
-	char add(char a, char b){
+	char Add(char a, char b){
 		return a^b;
 	}
 	
-	char multiply(int a, char b){
+	char Multiply(int a, char b){
 		
 		// get the appropriate lookup table
 		const int* table;
 		if (a == 2)
-			table = mul2;
+			table = kMul2;
 		else if (a == 3)
-			table = mul3;
+			table = kMul3;
 		else if (a == 9)
-			table = mul9;
+			table = kMul9;
 		else if (a == 11)
-			table = mul11;
+			table = kMul11;
 		else if (a == 13)
-			table = mul13;
+			table = kMul13;
 		else if (a == 14)
-			table = mul14;
+			table = kMul14;
 		else {
 			cout << "invalid multiplication coefficient" << endl;
 			return 0;
 		}
 		
-		return table[get_high_nibble(b) + get_low_nibble(b)*16];
+		return table[GetHighNibble(b) + GetLowNibble(b)*16];
 	}
 	
-	char** make_state(int cols){
+	char** MakeState(int cols){
 		char** state = new char*[4];
 		for(int row = 0; row < 4; row++){
 			state[row] = new char[cols];
@@ -383,56 +387,56 @@ namespace aes {
 		return state;
 	}
 	
-	void add_round_key(char** state, word* words, int round){
-		cout << "add_round_key" << endl;
-		const int l = round*nb; 
-		for (int col = 0; col < nb; col++){
-			state[0][col] = add(state[0][col], words[l+col].one);
-			state[1][col] = add(state[1][col], words[l+col].two);
-			state[2][col] = add(state[2][col], words[l+col].three);
-			state[3][col] = add(state[3][col], words[l+col].four);
+	void AddRoundKey(char** state, Word* words, int round){
+		//cout << "AddRoundKey" << endl;
+		const int l = round*kNb; 
+		for (int col = 0; col < kNb; col++){
+			state[0][col] = Add(state[0][col], words[l+col].one);
+			state[1][col] = Add(state[1][col], words[l+col].two);
+			state[2][col] = Add(state[2][col], words[l+col].three);
+			state[3][col] = Add(state[3][col], words[l+col].four);
 		}
 	}
 	
-	void shift_rows(char** state){
-		cout << "shift_rows" << endl;
+	void ShiftRows(char** state){
+		//cout << "ShiftRows" << endl;
 		for (int row = 1; row < 4; row++){
-			char new_vals[nb];
-			for (int col = 0; col < nb; col++){
-				new_vals[col] = state[row][(col + row)%nb];
+			char new_vals[kNb];
+			for (int col = 0; col < kNb; col++){
+				new_vals[col] = state[row][(col + row)%kNb];
 			}
-			for (int col = 0; col < nb; col++){
+			for (int col = 0; col < kNb; col++){
 				state[row][col] = new_vals[col];
 			} 
 		}
 	}
 	
-	void mix_columns(char** state){
-		cout << "mix_columns" << endl;
-		for (int col = 0; col < nb; col++){
+	void MixColumns(char** state){
+		//cout << "MixColumns" << endl;
+		for (int col = 0; col < kNb; col++){
 			char result[4]; // 4 rows
-			result[0] = add(
-										add( 
-											add(multiply(2, state[0][col]), 
-													multiply(3, state[1][col])) 
+			result[0] = Add(
+										Add( 
+											Add(Multiply(2, state[0][col]), 
+													Multiply(3, state[1][col])) 
 											,state[2][col]), 
 										state[3][col]);
-			result[1] = add(
-										add( 
-											add(state[0][col], 
-													multiply(2, state[1][col])),
-											multiply(3, state[2][col])),
+			result[1] = Add(
+										Add( 
+											Add(state[0][col], 
+													Multiply(2, state[1][col])),
+											Multiply(3, state[2][col])),
 										state[3][col]);
-			result[2] = add(
-										add(
-											add(state[0][col], state[1][col]),
-											multiply(2, state[2][col])), 
-										multiply(3, state[3][col]));
-			result[3] = add(
-										add(
-											add(multiply(3, state[0][col]), state[1][col]),
+			result[2] = Add(
+										Add(
+											Add(state[0][col], state[1][col]),
+											Multiply(2, state[2][col])), 
+										Multiply(3, state[3][col]));
+			result[3] = Add(
+										Add(
+											Add(Multiply(3, state[0][col]), state[1][col]),
 											state[2][col]), 
-										multiply(2, state[3][col]));
+										Multiply(2, state[3][col]));
 			
 			for (int row = 0; row < 4; row++){
 				state[row][col] = result[row];
@@ -441,43 +445,43 @@ namespace aes {
 	}
 	
 	
-	void encrypt_cipher(char** in_state, char* raw_input, char** out_state, char* raw_output, int offset, word* key_words, int nr){
-    get_state(in_state, raw_input, offset);
-    print_state(in_state);
+	void EncryptCipher(char** in_state, char* raw_input, char** out_state, char* raw_output, int offset, Word* key_words, int nr){
+    GetState(in_state, raw_input, offset);
+    //PrintState(in_state);
     
     // start actual cipher
-    add_round_key(in_state, key_words, 0);
-    print_state(in_state);
+    AddRoundKey(in_state, key_words, 0);
+    //PrintState(in_state);
     
     for (int round = 1; round < nr; round++){
     	cout << "round " << round << endl;
-    	sub_bytes(in_state);
-    	print_state(in_state);
-    	shift_rows(in_state);
-    	print_state(in_state);
-    	mix_columns(in_state);
-    	print_state(in_state);
-    	add_round_key(in_state, key_words, round);
-    	print_state(in_state);
+    	SubBytes(in_state);
+    	//PrintState(in_state);
+    	ShiftRows(in_state);
+    	//PrintState(in_state);
+    	MixColumns(in_state);
+    	//PrintState(in_state);
+    	AddRoundKey(in_state, key_words, round);
+    	//PrintState(in_state);
     }
     cout << "round " << nr << endl;
-    sub_bytes(in_state);
-    print_state(in_state);
-    shift_rows(in_state);
-    print_state(in_state);
-    add_round_key(in_state, key_words, nr);
-    print_state(in_state);
+    SubBytes(in_state);
+    //PrintState(in_state);
+    ShiftRows(in_state);
+    //PrintState(in_state);
+    AddRoundKey(in_state, key_words, nr);
+    //PrintState(in_state);
     
     // output
-    read_state(in_state, raw_output, offset);
+    ReadState(in_state, raw_output, offset);
 	}
 	
-  void encrypt(char* raw_input, char* raw_key, char* raw_output, int key_size, int& input_size){
-    pad(raw_input, input_size); // pad the input appropriately
+  void Encrypt(char* raw_input, char* raw_key, char* raw_output, int key_size, int& input_size){
+    Pad(raw_input, input_size); // pad the input appropriately
     
-    const int word_size = 32; // 4 bytes
-    const int nk = key_size/word_size; // standard variable, words in the key
-    const int nr = nk + 6; // standard variable, should be either 10 or 14 depending on key_size; number of rounds
+    const int kWordSize = 32; // 4 bytes
+    const int kNk = key_size/kWordSize; // standard variable, words in the key
+    const int kNr = kNk + 6; // standard variable, should be either 10 or 14 depending on key_size; number of rounds
     
     if (input_size % 16 != 0 || input_size == 0){
     	cout << "padding size error" << endl;
@@ -488,19 +492,18 @@ namespace aes {
 
   	
   	// get our key expansion (word array)
-  	const int expanded_key_size = nb*(nr+1);
-  	word* key_word_array = new word[expanded_key_size]; // each word is 4 bytes
-    key_expansion(raw_key, key_word_array, nk, nb*(nr+1));
-    print_words(key_word_array, expanded_key_size);
+  	const int expanded_key_size = kNb*(kNr+1);
+  	Word* key_word_array = new Word[expanded_key_size]; // each word is 4 bytes
+    ExpandKey(raw_key, key_word_array, kNk, kNb*(kNr+1));
+    //PrintWords(key_word_array, expanded_key_size);
     
-
-    char** in_state = make_state(nb);
-  	char** out_state = make_state(nb);
+    char** in_state = MakeState(kNb);
+  	char** out_state = MakeState(kNb);
     // set up main cipher loop
     for (int i = 0; i < input_size; i += 16){	
-		  encrypt_cipher(in_state, raw_input, out_state, raw_output, i, key_word_array, nr);
+		  EncryptCipher(in_state, raw_input, out_state, raw_output, i, key_word_array, kNr);
     }
-    print_data(raw_output, input_size);
+    //PrintData(raw_output, input_size);
   }
   
   void decrypt(char* raw_input, char* raw_key, char* raw_output, int key_size, int input_size){
@@ -638,7 +641,7 @@ int main (int argc, char *argv[]){
 		raw_input = new char[input_size/16 + 16]; // add extra space for the padding
 		raw_output = new char[input_size/16 + 16]; 
 		input_file_stream.read(raw_input, input_size); 
-	  encrypt(raw_input, raw_key, raw_output, key_size, input_size);
+	  Encrypt(raw_input, raw_key, raw_output, key_size, input_size);
 	  }
 	else if (mode == "decrypt"){
 		raw_input = new char[input_size];
