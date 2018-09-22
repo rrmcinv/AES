@@ -19,7 +19,7 @@ For simplicity and speed, sbox and multiplication values have been hardcoded.
 
 In all cases, the program starts by parsing command line arguments and attempting to resolve filenames and encryption size and type. If it succeeds, it reads in data and calls the appropriate function, either Encrypt() or Decrypt().
 
-# Encryption:
+## Encryption:
 
 Encrypt() begins by padding the input by the CMS method with a call to Pad(). This function appends numbers to the end of the data until the data size is divisible by 16 bytes, with each padded number being equal to the total number of padded bytes.This function ALWAYS pads, even if the data size was already divisible by 16.
 
@@ -31,7 +31,7 @@ Next, we expand our key with a call to ExpandKey. This creates an array of words
 
 Now that we have our key, we enter into a loop, processing 16 bytes of our input at a time and running EncryptCipher on them. When we're done, we return to main, where our output is written.
 
-## EncryptCipher
+### EncryptCipher
 This main processing function starts by reading input data into a state. We then call AddRoundKey an initial time before entering a loop for the remaining rounds (minus the last round). Each round calls SubBytes, ShiftRows, MixColumns, and AddRoundKey on our input data. The final round does not mix columns, but performs all other functions. Finally, we output our data from the state to our output buffer at the appropriate location.
 
 ### XorWords
@@ -55,11 +55,11 @@ Effectively performs matrix multiplication with a provided matrix (formed from t
 ### AddRoundKey
 Differs slightly from the AES description of AddRoundKey; does not take a start or stop index for the expanded key words. Instead, uses the round number and establishes a start point as indicated in the standard (start = round*Nb). Simply goes down the array of key words and "adds" (Xors) their bytes to the state matrix column by column.
 
-# Decryption:
+## Decryption:
 
 Decrypt() is extremely similar to Encrypt(), only inversed. We start by calculating Nk and Nr then expanding our key again, and then we call our main cipher, DecryptCipher. Finally, we remove our padding with DePad and return to main.
 
-## DecryptCipher
+### DecryptCipher
 Basically EncryptCipher in reverse. Reads our input into a state, then calls AddRoundKey (exact same function as in EncryptCipher, as it is its own inverse) for the last word in our expanded key. Then runs through a reverse round process, starting at the end of the expanded key and moving back to round 0. For each round, we call InvShiftRow, InvSubBytes, AddRoundKey, and then InvMixColumns (I'm actually not 100% sure why this order, but the standard states that we should use it and it works). For the last round (which reverses the first round of our encryption), we just do InvShiftRows and InvSubBytes, and then a final AddroundKey.
 
 ### AddRoundKey
