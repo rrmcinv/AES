@@ -108,6 +108,7 @@ namespace aes {
   		}
   			cout << endl;
   	}
+  	cout << endl;
   }
   
   void print_words(word* words, int size){
@@ -137,6 +138,15 @@ namespace aes {
 		}
 	}
 	
+	void get_state(char** state, word* words, int start_index){
+		for (int i = 0; i < nb; i++){
+			state[0][i] = words[start_index + i].one;
+			state[1][i] = words[start_index + i].two;
+			state[2][i] = words[start_index + i].three;
+			state[3][i] = words[start_index + i].four;
+		}
+	}
+	
 	void read_state(char** state, char* output, int start_index){
 		for (int i = 0; i < nb; i++){
 			for (int j = 0; j < nb; j++){
@@ -162,7 +172,8 @@ namespace aes {
 		return s_box[high_nibble*16 + low_nibble];
 	}
 	
-	void sub_bytes(char** state, int nb){
+	void sub_bytes(char** state){
+		cout << "sub_bytes" << endl;
 		for (int i = 0; i < nb; i++){
 			for (int j = 0; j < 4; j++){
 				state[j][i] = sub_byte(state[j][i]);
@@ -230,12 +241,39 @@ namespace aes {
 	
 	}
 	
+	char** make_state(int cols){
+		char** state = new char*[4];
+		for(int j = 0; j < 4; j++){
+			state[j] = new char[cols];
+		}
+		return state;
+	}
+	
+	void add_round_key(char** state, word* words, int round){
+		cout << "add_round_key" << endl;
+		const int l = round*nb; 
+		for (int i = 0; i < nb; i++){
+			state[0][i] = add(state[0][i], words[l+i].one);
+			state[1][i] = add(state[1][i], words[l+i].two);
+			state[2][i] = add(state[2][i], words[l+i].three);
+			state[3][i] = add(state[3][i], words[l+i].four);
+		}
+	}
+	
+	void shift_rows(char** state){
+		cout << "shift_rows" << endl;
+	}
+	
+	void mix_columns(char** state){
+		cout << "mix_columns" << endl;
+	}
+	
   void encrypt(char* raw_input, char* raw_key, char* raw_output, int key_size, int input_size){
     pad(raw_input, input_size); // pad the input appropriately
     
     const int word_size = 32; // 4 bytes
     const int nk = key_size/word_size; // standard variable, words in the key
-    const int nr = nk + 6; // standard variable, should be either 10 or 14 depending on key_size
+    const int nr = nk + 6; // standard variable, should be either 10 or 14 depending on key_size; number of rounds
     
     if (input_size % 16 != 0 || input_size == 0){
     	cout << "padding size error" << endl;
@@ -243,24 +281,36 @@ namespace aes {
     }
     	
     // set up our state arrays
-  	char** in_state = new char*[nb];
-  	char** out_state = new char*[nb];
-  	for(int j = 0; j < nb; j++){
-  		in_state[j] = new char[nb];
-  		out_state[j] = new char[nb];
-  	}
+  	char** in_state = make_state(nb);
+  	char** out_state = make_state(nb);
   	
   	// get our key expansion (word array)
   	const int expanded_key_size = nb*(nr+1);
   	word* word_array = new word[expanded_key_size]; // each word is 4 bytes
     key_expansion(raw_key, word_array, nk, nb*(nr+1));
-    //print_words(word_array, expanded_key_size);
+    print_words(word_array, expanded_key_size);
+    
+    //print_data(raw_input, nb*nb, i);
+    get_state(in_state, raw_input, 0);
+    print_state(in_state);
+    add_round_key(in_state, word_array, 0);
+    print_state(in_state);
+    
+    for (int round = 1; round < (nr - 1); round++){
+    	cout << "round " << round << endl;
+    	sub_bytes(in_state);
+    	print_state(in_state);
+    	shift_rows(in_state);
+    	print_state(in_state);
+    	mix_columns(in_state);
+    	print_state(in_state);
+    	add_round_key(in_state, word_array, round);
+    	print_state(in_state);
+    }
     
     // set up main cipher loop
     for (int i = 0; i < input_size; i += 16){	
-		  get_state(in_state, raw_input, i);
-		  //print_data(raw_input, nb*nb, i);
-		  //print_state(in_state);
+		  
     }
   }
   
