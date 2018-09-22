@@ -500,6 +500,7 @@ namespace aes {
     for (int i = 0; i < input_size; i += 16){	
 		  encrypt_cipher(in_state, raw_input, out_state, raw_output, i, key_word_array, nr);
     }
+    print_data(raw_output, input_size);
   }
   
   void decrypt(char* raw_input, char* raw_key, char* raw_output, int key_size, int input_size){
@@ -645,6 +646,8 @@ int main (int argc, char *argv[]){
 		input_file_stream.read(raw_input, input_size); 
 	  decrypt(raw_input, raw_key, raw_output, key_size, input_size);
 	}
+	
+	output_file_stream.write(raw_output, input_size);
 	
 	input_file_stream.close();
 	key_file_stream.close();
