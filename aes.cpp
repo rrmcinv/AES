@@ -54,7 +54,7 @@ const int kSBox[256] =
  ,0xe1 ,0xf8 ,0x98 ,0x11 ,0x69 ,0xd9 ,0x8e ,0x94 ,0x9b ,0x1e ,0x87 ,0xe9 ,0xce ,0x55 ,0x28 ,0xdf
  ,0x8c ,0xa1 ,0x89 ,0x0d ,0xbf ,0xe6 ,0x42 ,0x68 ,0x41 ,0x99 ,0x2d ,0x0f ,0xb0 ,0x54 ,0xbb ,0x16};
  
- const int kInversekSBox[256] =
+ const int kInverseSBox[256] =
  {0x52 ,0x09 ,0x6a ,0xd5 ,0x30 ,0x36 ,0xa5 ,0x38 ,0xbf ,0x40 ,0xa3 ,0x9e ,0x81 ,0xf3 ,0xd7 ,0xfb
  ,0x7c ,0xe3 ,0x39 ,0x82 ,0x9b ,0x2f ,0xff ,0x87 ,0x34 ,0x8e ,0x43 ,0x44 ,0xc4 ,0xde ,0xe9 ,0xcb
  ,0x54 ,0x7b ,0x94 ,0x32 ,0xa6 ,0xc2 ,0x23 ,0x3d ,0xee ,0x4c ,0x95 ,0x0b ,0x42 ,0xfa ,0xc3 ,0x4e
@@ -411,13 +411,13 @@ namespace aes {
 			table = kMul2;
 		else if (a == 3)
 			table = kMul3;
-		else if (a == 9)
+		else if (a == 0x09)
 			table = kMul9;
-		else if (a == 11)
+		else if (a == 0x0b)
 			table = kMul11;
-		else if (a == 13)
+		else if (a == 0x0d)
 			table = kMul13;
-		else if (a == 14)
+		else if (a == 0x0e)
 			table = kMul14;
 		else {
 			cout << "invalid multiplication coefficient" << endl;
@@ -583,7 +583,7 @@ namespace aes {
 		unsigned char c = byte;
 		unsigned char high_nibble = GetLowNibble(byte);
 		unsigned char low_nibble = GetHighNibble(byte);
-		return kSBox[high_nibble*16 + low_nibble];
+		return kInverseSBox[high_nibble*16 + low_nibble];
 	}
 	
 		
@@ -599,8 +599,41 @@ namespace aes {
 		}
   }
   
+ 	//
+	// given state "state", performs the AES operation InvMixColumns
+	//
   void InvMixColumns(char** state){
-  
+  	for (int col = 0; col < kNb; col++){
+			char result[4]; // 4 rows
+			result[0] = Add(
+										Add( 
+											Add(Multiply(0x0e, state[0][col]), 
+													Multiply(0x0b, state[1][col])), 
+											Multiply(0x0d, state[2][col])), 
+										Multiply(0x09, state[3][col]));
+			result[1] = Add(
+										Add( 
+											Add(Multiply(0x09, state[0][col]), 
+													Multiply(0x0e, state[1][col])),
+											Multiply(0x0b, state[2][col])),
+										Multiply(0x0d, state[3][col]));
+			result[2] = Add(
+										Add(
+											Add(Multiply(0x0d, state[0][col]), 
+													Multiply(0x09, state[1][col])),
+											Multiply(0x0e, state[2][col])), 
+										Multiply(0x0b, state[3][col]));
+			result[3] = Add(
+										Add(
+											Add(Multiply(0x0b, state[0][col]), 
+													Multiply(0x0d, state[1][col])),
+											Multiply(0x09, state[2][col])), 
+										Multiply(0x0e, state[3][col]));
+			
+			for (int row = 0; row < 4; row++){
+				state[row][col] = result[row];
+			}
+		}
   }
   
   
